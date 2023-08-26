@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Table, TableContainer, TableHead, TableRow, TableCell, TableBody, TablePagination, TableSortLabel, Paper } from '@mui/material';
+import {
+  Table,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  TablePagination,
+  TableSortLabel,
+  Paper,
+  Typography
+} from '@mui/material';
 
 type Column = {
   id: string;
@@ -11,19 +22,20 @@ type Column = {
 type Props = {
   columns: Column[];
   data: any[];
+  count: number;
   fetchData: (orderBy: string | null, order: string | null, page: number, pageSize: number) => void;
-  onRowButtonClick: (rowData: any) => void;
 };
 
-const BasicTable: React.FC<Props> = ({ columns, data, fetchData, onRowButtonClick }) => {
+const BasicTable: React.FC<Props> = ({ columns, data, count, fetchData }) => {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [orderBy, setOrderBy] = useState<string | null>(null);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
+    console.log(orderBy, order, page, rowsPerPage);
     fetchData(orderBy, order, page, rowsPerPage);
-  }, [orderBy, order, page, rowsPerPage, fetchData]);
+  }, [orderBy, order, page, rowsPerPage]);
 
   const handleSortRequest = (property: string) => {
     const newOrderBy = property;
@@ -51,9 +63,9 @@ const BasicTable: React.FC<Props> = ({ columns, data, fetchData, onRowButtonClic
                 <TableCell key={column.id}>
                   {column.isAction ? (
                     column.action && (
-                      <TableSortLabel direction={orderBy === column.id ? order : 'asc'} onClick={() => handleSortRequest(column.id)}>
+                      <Typography fontWeight={'bold'} variant={'subtitle1'}>
                         {column.label}
-                      </TableSortLabel>
+                      </Typography>
                     )
                   ) : (
                     <TableSortLabel
@@ -61,7 +73,9 @@ const BasicTable: React.FC<Props> = ({ columns, data, fetchData, onRowButtonClic
                       direction={orderBy === column.id ? order : 'asc'}
                       onClick={() => handleSortRequest(column.id)}
                     >
-                      {column.label}
+                      <Typography fontWeight={'bold'} variant={'subtitle1'}>
+                        {column.label}
+                      </Typography>
                     </TableSortLabel>
                   )}
                 </TableCell>
@@ -84,7 +98,7 @@ const BasicTable: React.FC<Props> = ({ columns, data, fetchData, onRowButtonClic
       <TablePagination
         rowsPerPageOptions={[5, 10, 25]}
         component="div"
-        count={100} // Replace with the total count of your data from the API
+        count={count}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}

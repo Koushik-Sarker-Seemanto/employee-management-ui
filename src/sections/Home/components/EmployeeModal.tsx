@@ -22,7 +22,14 @@ import * as Yup from 'yup';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import utc from 'dayjs/plugin/utc';
 import dayjs from 'dayjs';
+import axios from 'axios';
+import { departmentsReverseMap, EmployeeDto } from '../../../types/employee-types';
+import { useState } from 'react';
+import Loader from '../../../components/Loader';
+
+dayjs.extend(utc);
 
 const style = {
   position: 'absolute' as 'absolute',
@@ -41,19 +48,63 @@ type Props = {
   handleClose: () => void;
   handleSuccess: () => void;
   isUpdate?: boolean;
+  selectedEmployee?: EmployeeDto | null;
 };
 
-const EmployeeModal = ({ handleClose, handleSuccess, isUpdate = false }: Props) => {
+const EmployeeModal = ({ handleClose, handleSuccess, selectedEmployee = null, isUpdate = false }: Props) => {
+  const [loading, setLoading] = useState(false);
   const addEmployee = (values: any) => {
-    console.log('addEmployee: ', values);
+    setLoading(true);
+    const payload = {
+      name: values.name,
+      email: values.email,
+      doB: toUTCDate(values.dob),
+      department: departmentsReverseMap[values.department]
+    };
+    console.log('Payload: ', payload);
+    axios
+      .post(process.env.REACT_APP_BASE_API_URL + '/api/employee', payload, { headers: { 'Content-Type': 'application/json' } })
+      .then((res) => {
+        handleSuccess();
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('ERROR: ', err);
+        setLoading(false);
+      });
   };
 
   const updateEmployee = (values: any) => {
+    setLoading(true);
     console.log('updateEmployee: ', values);
+    const payload = {
+      id: selectedEmployee?.id,
+      name: values.name,
+      email: values.email,
+      doB: toUTCDate(values.dob),
+      department: departmentsReverseMap[values.department]
+    };
+    console.log('Payload: ', payload);
+    axios
+      .put(process.env.REACT_APP_BASE_API_URL + '/api/employee', payload, { headers: { 'Content-Type': 'application/json' } })
+      .then((res) => {
+        setLoading(false);
+        handleSuccess();
+      })
+      .catch((err) => {
+        setLoading(false);
+        console.error('ERROR: ', err);
+      });
+  };
+
+  const toUTCDate = (date: string) => {
+    const localDate = new Date(date);
+    return localDate.toISOString();
   };
 
   return (
     <Box sx={{ ...style, p: 0 }}>
+      {loading && <Loader />}
       <Card>
         <CardHeader
           action={
@@ -68,10 +119,10 @@ const EmployeeModal = ({ handleClose, handleSuccess, isUpdate = false }: Props) 
           <Grid item xs={12} sx={{ mt: 2, px: 1 }}>
             <Formik
               initialValues={{
-                name: '',
-                email: '',
-                department: '',
-                dob: '',
+                name: selectedEmployee ? selectedEmployee.name : '',
+                email: selectedEmployee ? selectedEmployee.email : '',
+                department: selectedEmployee ? selectedEmployee.department : '',
+                dob: selectedEmployee ? selectedEmployee.fullDoB : null,
                 submit: null
               }}
               validationSchema={Yup.object().shape({
@@ -90,7 +141,7 @@ const EmployeeModal = ({ handleClose, handleSuccess, isUpdate = false }: Props) 
             >
               {({ errors, handleBlur, handleChange, setFieldValue, setFieldTouched, handleSubmit, touched, values }) => (
                 <form noValidate>
-                  <Grid item xs={12} spacing={3}>
+                  <Grid item xs={12}>
                     <Grid item sx={{ mt: 3 }} xs={12}>
                       <Stack spacing={1}>
                         <TextField
@@ -141,7 +192,7 @@ const EmployeeModal = ({ handleClose, handleSuccess, isUpdate = false }: Props) 
                         )}
                       </Stack>
                     </Grid>
-                    <Grid item sx={{ mt: 3 }} xs={12} display={'flex'} spacing={2}>
+                    <Grid item sx={{ mt: 3 }} xs={12} display={'flex'}>
                       <Grid item sx={{ mr: 1 }} xs={6}>
                         <Stack spacing={1}>
                           <FormControl fullWidth>
@@ -167,7 +218,7 @@ const EmployeeModal = ({ handleClose, handleSuccess, isUpdate = false }: Props) 
                               <MenuItem key={'Tech'} value={'Tech'}>
                                 Tech
                               </MenuItem>
-                              <MenuItem key={'Tech'} value={'HR'}>
+                              <MenuItem key={'HR'} value={'HR'}>
                                 HR
                               </MenuItem>
                               <MenuItem key={'Admin'} value={'Admin'}>
@@ -192,13 +243,14 @@ const EmployeeModal = ({ handleClose, handleSuccess, isUpdate = false }: Props) 
                         <Stack spacing={1}>
                           <LocalizationProvider dateAdapter={AdapterDayjs}>
                             <DatePicker
+                              timezone={'UTC'}
                               sx={{ input: { height: '7px' } }}
                               onChange={(value) => {
-                                const selectedDate = dayjs(value).toDate();
+                                const selectedDate = dayjs.utc(value).toDate();
                                 console.log('DATE: ', selectedDate);
                                 setFieldValue('dob', selectedDate);
                               }}
-                              value={values.dob}
+                              value={dayjs(values.dob) || null}
                             />
                           </LocalizationProvider>
                           {touched.dob && errors.dob && (
